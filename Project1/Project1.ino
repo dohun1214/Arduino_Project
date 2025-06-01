@@ -17,6 +17,8 @@ int flamePin = 8;        //화염감지해서 LED
 
 int speakerPin = 9;  //부저
 
+int alertLED = 11;  //초음파 센서로 감지해서 LED
+
 SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
 DHT11 dht11(4);         //온습도센서
 int LED1 = 5;           // 온도에 따른 LED
@@ -55,6 +57,8 @@ void setup() {
   pinMode(echoPin, INPUT);
   pinMode(flameSensorPin, INPUT);
   pinMode(flamePin, OUTPUT);
+  pinMode(alertLED,OUTPUT);
+  pinMode(speakerPin, OUTPUT);
 
   lcd.begin();
   lcd.backlight();
@@ -105,14 +109,36 @@ void loop() {
       }
     } else if (mode == 'M') {
       if (cmd == '1') {
-        bluetooth.print("LED ON");
+        bluetooth.println("LED ON");
         digitalWrite(LED1, HIGH);
       } else if (cmd == '0') {
-        bluetooth.print("LED OFF");
+        bluetooth.println("LED OFF");
         digitalWrite(LED1, LOW);
       }
     }
 
+    // 일정 온도 넘으면 팬 돌아가게, 모드 설정
+    if (mode == 'A') {
+      if (temperature >= 35) {
+        servo.attach(motor_control);
+        servo.write(0);
+        delay(500);
+        servo.write(180);
+      } else {
+        servo.detach();
+      }
+    } else if (mode == 'M') {
+      if (cmd == '2') {
+        bluetooth.println("Fan ON");
+        servo.attach(motor_control);
+        servo.write(0);
+        delay(500);
+        servo.write(180);
+      } else if (cmd == '3') {
+        bluetooth.println("Fan OFF");
+        servo.detach();
+      }
+    }
 
 
 
@@ -133,16 +159,8 @@ void loop() {
     }
   }
 
-  // 일정 온도 넘으면 팬 돌아가게
-  if (temperature >= 30) { // if문 숫자 수정
-    //팬 돌아가게
-    servo.attach(motor_control);
-    servo.write(0);
-    delay(500);
-    servo.write(180);
-  } else {
-    servo.detach();
-  }
+
+
   //온도 습도 끝
 
   //화염 감지해서 LED 켜기
@@ -155,14 +173,15 @@ void loop() {
 
 
   // lcd출력
-  if (cm <= 0) {  // if문 거리 숫자 수정
+  if (cm <= 3) {  // if문 거리 숫자 수정
     //가까이 오면 lcd출력, 부저 울리기
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Motion Detected");
     tone(speakerPin, 5000, 500);
+    bluetooth.print("Motion Detected");
+    digitalWrite(alertLED, HIGH);
   } else {
-    digitalWrite(flamePin, LOW);
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Temp:");
@@ -172,6 +191,7 @@ void loop() {
     lcd.print("Humi:");
     lcd.print(humidity);
     lcd.print("%");
+    digitalWrite(alertLED, LOW);
   }
 
 
