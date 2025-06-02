@@ -24,10 +24,15 @@ DHT11 dht11(4);         //온습도센서
 int LED1 = 5;           // 온도에 따른 LED
 int lightPin = A0;      //조도센서
 int motor_control = 6;  //서보모터
+int tactPin = 10;
+
 Servo servo;
 
 
 char mode = 'A';
+
+int isMotionDetected = 0;
+int isEmergencyActive = 0;
 
 //센서 측정값들 블루투스로 보내주는 함수
 void sendSensorData(int temperature, int humidity, int brightness, long cm) {
@@ -48,6 +53,20 @@ long microsecondsToCentimeters(long microseconds) {
 }
 
 
+//택트 스위치 눌렀을때
+void emergencyButton() {
+  isEmergencyActive = 1;
+  digitalWrite(alertLED, HIGH);
+  delay(200);
+  digitalWrite(alertLED, LOW);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("!!! EMERGENCY !!!");
+  bluetooth.println("Emergency Button Pressed!");
+  tone(speakerPin, 5000, 500);
+}
+
+
 
 void setup() {
   Serial.begin(9600);
@@ -57,8 +76,10 @@ void setup() {
   pinMode(echoPin, INPUT);
   pinMode(flameSensorPin, INPUT);
   pinMode(flamePin, OUTPUT);
-  pinMode(alertLED,OUTPUT);
+  pinMode(alertLED, OUTPUT);
   pinMode(speakerPin, OUTPUT);
+  pinMode(tactPin, INPUT);
+  pinMode(A0, INPUT);
 
   lcd.begin();
   lcd.backlight();
@@ -175,13 +196,29 @@ void loop() {
   // lcd출력
   if (cm <= 3) {  // if문 거리 숫자 수정
     //가까이 오면 lcd출력, 부저 울리기
+    isMotionDetected = 1;
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Motion Detected");
     tone(speakerPin, 5000, 500);
     bluetooth.print("Motion Detected");
     digitalWrite(alertLED, HIGH);
+    delay(100);
+    digitalWrite(alertLED, LOW);
   } else {
+    isMotionDetected = 0;
+  }
+
+
+
+  //스위치 눌러서 경보
+  if (digitalRead(tactPin)) {
+    emergencyButton();
+  } else {
+    isEmergencyActive = 0;
+  }
+
+  if (!isEmergencyActive && !isMotionDetected) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Temp:");
@@ -193,8 +230,6 @@ void loop() {
     lcd.print("%");
     digitalWrite(alertLED, LOW);
   }
-
-
 
   // bluetooth.available() 블루투스로 보낸 데이터가 도착했을때
   // bluetooth.print() 블루투스로 데이터를 보냄
