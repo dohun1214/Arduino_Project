@@ -43,12 +43,12 @@
 #### **2.1 침입 감지**
 - **센서:** 초음파 센서  
 - **기능:**  
-  - 거리 ≤ 3cm인 경우:
+  - 거리 ≤ 10cm인 경우:
     - LCD에 "Motion Detected" 표시  
     - 부저 울림, LED 점멸, 블루투스로 알림 전송  
   - 코드 예시:
     ```cpp
-    if (cm <= 3) {
+    if (cm <= 10) {
       lcd.print("Motion Detected");
       tone(speakerPin, 5000, 500);
       bluetooth.print("Motion Detected");
